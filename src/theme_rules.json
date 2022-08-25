@@ -1,0 +1,28 @@
+[
+  {
+    "app": "rofi",
+    "config_path": "$XDG_CONFIG_HOME/rofi/config.rasi"
+  },
+  {
+    "app": "xfce4_terminal",
+    "config_path": "$XDG_CONFIG_HOME/xfce4/terminal/terminalrc"
+  },
+  {
+    "app": "i3",
+    "config_path": "$XDG_CONFIG_HOME/i3/colors.conf"
+  },
+  {
+    "app": "ghostwriter",
+    "config_path": "$XDG_CONFIG_HOME/ghostwriter/",
+    "config_paths": ["$XDG_CONFIG_HOME/ghostwriter/themes/"]
+  },
+  {
+    "app": "micro",
+    "config_path": "$XDG_CONFIG_HOME/micro/",
+    "config_paths": ["$XDG_CONFIG_HOME/micro/colorschemes/"]
+  },
+  {
+    "app": "mousepad",
+    "config_paths": ["$HOME/.local/share/gtksourceview-3.0/styles/", "$HOME/.local/share/gtksourceview-4/styles/"]
+  }
+]

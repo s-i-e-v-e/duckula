@@ -4,9 +4,13 @@
 
 ## Supported applications
 
-* xfce4-terminal
-* i3wm
+* ghostwriter
+* gtk
+* i3
+* micro
+* mousepad
 * rofi
+* xfce4-terminal
 
 ## Getting Started
 
