@@ -24,5 +24,10 @@
   {
     "app": "mousepad",
     "config_paths": ["$HOME/.local/share/gtksourceview-3.0/styles/", "$HOME/.local/share/gtksourceview-4/styles/"]
+  },
+  {
+    "app": "kitty",
+    "config_path": "$XDG_CONFIG_HOME/kitty/",
+    "config_paths": ["$XDG_CONFIG_HOME/kitty/"]
   }
 ]

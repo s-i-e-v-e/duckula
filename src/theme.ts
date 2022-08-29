@@ -7,13 +7,17 @@
  */
 import _rules from "./theme_rules.json" assert {type: "json"};
 import {
-    canonical_path,
-    exec, io_dir_ls,
-    io_file_cp,
-    io_file_exists, io_file_ls, io_get_file_name_part, io_read_text,
-    io_read_text_as_list, io_write_text,
-    io_write_text_as_list,
-    list_entry_replace
+    fs_file_exists,
+    ps_exec,
+    fs_dir_ls,
+    fs_cp,
+    fs_file_ls,
+    fs_read_utf8,
+    fs_read_utf8_list,
+    fs_write_utf8,
+    fs_write_utf8_list,
+    fs_canonical_path,
+    list_entry_replace, fs_parse_path
 } from "./io.ts";
 
 interface Rule {
@@ -27,56 +31,81 @@ const rules = _rules as Rule[];
 type ThemeFunc = (x: Rule, y: Rule) => void;
 
 function simple_file_copy(x: Rule, y: Rule) {
-    io_file_cp(x.config_path, y.config_path);
+    fs_cp(x.config_path, y.config_path);
 }
 
 function simple_dir_copy(x: Rule, y: Rule) {
     for (const d of y.config_paths!) {
-        for (const xx of io_file_ls(x.config_path)) {
-            io_file_cp(`${x.config_path}/${xx}`, `${d}${xx}`);
+        for (const xx of fs_file_ls(x.config_path)) {
+            fs_cp(`${x.config_path}/${xx}`, `${d}${xx}`);
         }
     }
 }
 
 function gtk_get_theme_name(path: string) {
-    return io_read_text_as_list(`${path}/index.theme`).filter(a => a.startsWith('Name='))[0].split('=')[1];
+    return fs_read_utf8_list(`${path}/index.theme`).filter(a => a.startsWith('Name='))[0].split('=')[1];
 }
 
-function gtk_apply(x: Rule, y: Rule) {
-    const theme = gtk_get_theme_name(x.config_path);
-    exec(x.config_path, ["gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", theme]);
-    exec(x.config_path, ["gsettings", "set", "org.gnome.desktop.wm.preferences", "theme", theme]);
+function update_gtk_settings(key: string, value: string) {
+    const kv = `${key} = ${value}`;
+    for (const v of ["gtk-3.0", "gtk-4.0"]) {
+        const cfg_file = `$HOME/.config/${v}/settings.ini`;
+        let ys: string[] = [];
+        if (fs_file_exists(cfg_file)) {
+            ys = fs_read_utf8_list(cfg_file);
+            const success = list_entry_replace(ys, `/^${key}=.*`, kv);
+            if (!success) {
+                ys.push(kv);
+            }
+        }
+        else {
+            ys.push('[Settings]');
+            ys.push(kv);
+        }
+        fs_write_utf8_list(cfg_file, ys);
+    }
 }
 
-function gtk_icons_apply(x: Rule, y: Rule) {
+async function gtk_apply(x: Rule, y: Rule) {
     const theme = gtk_get_theme_name(x.config_path);
-    exec(x.config_path, ["gsettings", "set", "org.gnome.desktop.interface", "icon-theme", theme]);
+    await ps_exec(x.config_path, ["cp", "-r", ".", fs_canonical_path(`$HOME/.themes/${theme}`)]);
+
+    // gnome
+    await ps_exec(x.config_path, ["gsettings", "set", "org.gnome.desktop.interface", "gtk-theme", theme]);
+    await ps_exec(x.config_path, ["gsettings", "set", "org.gnome.desktop.wm.preferences", "theme", theme]);
+
+    update_gtk_settings('gtk-theme-name', theme);
+}
+
+async function gtk_icons_apply(x: Rule, y: Rule) {
+    const theme = gtk_get_theme_name(x.config_path);
+    await ps_exec(x.config_path, ["cp", "-r", ".", fs_canonical_path(`$HOME/.icons/${theme}`)]);
+    await ps_exec(x.config_path, ["gsettings", "set", "org.gnome.desktop.interface", "icon-theme", theme]);
+
+    update_gtk_settings('gtk-icon-theme-name', theme);
 }
 
 function xfce4_terminal_apply(x: Rule, y: Rule) {
-    for (const ss of io_file_ls(x.config_path).map(a => io_read_text_as_list(`${x.config_path}/${a}`))) {
-        const ds = io_read_text_as_list(y.config_path);
+    for (const ss of fs_file_ls(x.config_path).map(a => fs_read_utf8_list(`${x.config_path}/${a}`))) {
+        const ds = fs_read_utf8_list(y.config_path);
         for (const s of ss) {
-            if (!s.startsWith('Color')) continue;
+            if (!s.match('.*Color.*')) continue;
             const x = s.split('=')[0];
-            const n = ds.findIndex(a => a.startsWith(x));
-            if (n >= 0) {
-                ds[n] = s;
-            }
-            else {
+            const success = list_entry_replace(ds, `/^${x}=.*`, s);
+            if (!success) {
                 ds.push(s);
             }
         }
-        io_write_text_as_list(y.config_path, ds);
+        fs_write_utf8_list(y.config_path, ds);
     }
 }
 
 function micro_apply(x: Rule, y: Rule) {
     simple_dir_copy(x, y);
     const conf_file = `${y.config_path}settings.json`;
-    const a = JSON.parse(io_read_text(conf_file));
-    a.colorscheme = io_get_file_name_part(x.config_path);
-    io_write_text(conf_file, JSON.stringify(a));
+    const a = JSON.parse(fs_read_utf8(conf_file));
+    a.colorscheme = fs_parse_path(fs_file_ls(x.config_path)[0]).name;
+    fs_write_utf8(conf_file, JSON.stringify(a));
 
     console.log('Add `export MICRO_TRUECOLOR=1` to your shell rc file');
 }
@@ -84,23 +113,36 @@ function micro_apply(x: Rule, y: Rule) {
 function ghostwriter_apply(x: Rule, y: Rule) {
     simple_dir_copy(x, y);
     const conf_file = `${y.config_path}ghostwriter.conf`;
-    const xs = io_read_text_as_list(conf_file);
-    const theme = io_get_file_name_part(io_file_ls(x.config_path)[0]);
+    const xs = fs_read_utf8_list(conf_file);
+    const theme = fs_parse_path(fs_file_ls(x.config_path)[0]).name;
     list_entry_replace(xs, /^theme=.*$/.source, `theme=${theme}`);
-    io_write_text_as_list(conf_file, xs);
+    fs_write_utf8_list(conf_file, xs);
+}
+
+function kitty_apply(x: Rule, y: Rule) {
+    simple_dir_copy(x, y);
+    const file = fs_file_ls(x.config_path).filter(a => a !== 'diff.conf')[0];
+    const entry = `include ${file}`;
+    const conf_file = `${y.config_path}kitty.conf`;
+    const xs = fs_file_exists(conf_file) ? fs_read_utf8_list(conf_file) : [];
+    const a = xs.filter(x => x === entry)[0];
+    if (!a) {
+        xs.push(entry);
+    }
+    fs_write_utf8_list(conf_file, xs);
 }
 
 function i3_apply(x: Rule, y: Rule) {
-    const f = io_file_ls(x.config_path)[0];
-    io_file_cp(`${x.config_path}/${f}`, y.config_path);
+    const f = fs_file_ls(x.config_path)[0];
+    fs_cp(`${x.config_path}/${f}`, y.config_path);
 }
 
 function rofi_apply(x: Rule, y: Rule) {
     const file = "~/.config/rofi/colors.rasi";
     const entry = `@import "${file}"`;
     let xs: string[];
-    if (io_file_exists(y.config_path)) {
-        xs = io_read_text_as_list(y.config_path);
+    if (fs_file_exists(y.config_path)) {
+        xs = fs_read_utf8_list(y.config_path);
 
         const a = xs.filter(x => x === entry)[0];
         if (!a) {
@@ -111,8 +153,8 @@ function rofi_apply(x: Rule, y: Rule) {
         xs = [];
         xs.push(entry);
     }
-    io_write_text_as_list(y.config_path, xs);
-    io_file_cp(x.config_path, y.config_path.replace('config.rasi', 'colors.rasi'));
+    fs_write_utf8_list(y.config_path, xs);
+    fs_cp(x.config_path, y.config_path.replace('config.rasi', 'colors.rasi'));
 }
 
 const functions = {
@@ -124,6 +166,7 @@ const functions = {
     "gtk": gtk_apply,
     "gtk_icons": gtk_icons_apply,
     "micro": micro_apply,
+    "kitty": kitty_apply,
 } as { [index: string]: ThemeFunc };
 
 function apply(x: Rule) {
@@ -137,21 +180,15 @@ function apply(x: Rule) {
 }
 
 export function theme_apply(path: string) {
-    if (!Deno.env.get('XDG_CONFIG_HOME')) {
-        const x = Deno.env.get('HOME');
-        if (!x) throw new Error('$XDG_CONFIG_HOME and $HOME are not defined.');
-        Deno.env.set('XDG_CONFIG_HOME', `${x}/.config`);
-    }
-
     console.log(`Applying themes from ${path}`);
 
-    const xs = io_dir_ls(path).map(x => { return {app: x, config_path: canonical_path(`${path}/${x}`)} as Rule; });
+    const xs = fs_dir_ls(path).map(x => { return {app: x, config_path: `${path}/${x}`} as Rule; });
     const cfg_file = `${path}/duckula.json`;
-    for (const y of JSON.parse(io_read_text(cfg_file)) as any[]) {
+    for (const y of JSON.parse(fs_read_utf8(cfg_file)) as any[]) {
         const k = Object.keys(y)[0];
         const ys = xs.filter(x => x.app === k);
         if (ys[0]) {
-            ys[0].config_path = canonical_path(`${path}/${y[k]}`)
+            ys[0].config_path = `${path}/${y[k]}`;
         }
     }
 
