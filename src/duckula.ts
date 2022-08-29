@@ -7,8 +7,8 @@
  */
  
 import {theme_apply} from "./theme.ts";
+import {os_gl, os_ugl, os_ul} from "./os.ts";
 
-const read = (file: string) => Deno.readTextFileSync(file);
 const println = console.log;
 
 function version() {
@@ -26,7 +26,7 @@ function help() {
 	println('theme apply <file>        Apply theme from file');
 }
 
-export function main(args: string[]) {
+export async function main(args: string[]) {
 	const cmd = args[0];
 	switch(cmd) {
 		case "theme": {
@@ -34,6 +34,25 @@ export function main(args: string[]) {
 			if (action === "apply") {
 				const path = args[2];
 				theme_apply(path);
+			}
+			break;
+		}
+		case "os": {
+			const action = args[1];
+			if (action === "ul") {
+				await os_ul();
+			}
+			else if (action === "gl") {
+				await os_gl();
+			}
+			else if (action === "ugl") {
+				await os_ugl(args[2]);
+			}
+			else if (action === "gul") {
+				await os_ugl(args[2]);
+			}
+			else {
+				println(`??? => ${args.join(' ')}`);
 			}
 			break;
 		}
@@ -45,4 +64,4 @@ export function main(args: string[]) {
 	}
 }
 
-if (import.meta.main) main(Deno.args);
+if (import.meta.main) await main(Deno.args);
