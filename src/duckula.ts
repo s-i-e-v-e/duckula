@@ -8,6 +8,7 @@
  
 import {theme_apply} from "./theme.ts";
 import {os_gl, os_ugl, os_ul} from "./os.ts";
+import {sync} from "./sync.ts";
 
 const println = console.log;
 
@@ -24,6 +25,7 @@ function help() {
 	println('help,    --help,          Display this information.');
 	println('version, --version        Display version information.');
 	println('theme apply <file>        Apply theme from file');
+	println('sync <file>			   Sync $HOME using specified configuration');
 }
 
 export async function main(args: string[]) {
@@ -54,6 +56,10 @@ export async function main(args: string[]) {
 			else {
 				println(`??? => ${args.join(' ')}`);
 			}
+			break;
+		}
+		case "sync": {
+			await sync(args[1]);
 			break;
 		}
 		case "--version":
