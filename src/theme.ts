@@ -31,13 +31,13 @@ const rules = _rules as Rule[];
 type ThemeFunc = (x: Rule, y: Rule) => void;
 
 function simple_file_copy(x: Rule, y: Rule) {
-    fs_cp(x.config_path, y.config_path);
+    fs_cp(x.config_path, y.config_path, true);
 }
 
 function simple_dir_copy(x: Rule, y: Rule) {
     for (const d of y.config_paths!) {
         for (const xx of fs_file_ls(x.config_path)) {
-            fs_cp(`${x.config_path}/${xx}`, `${d}${xx}`);
+            fs_cp(`${x.config_path}/${xx}`, `${d}${xx}`, true);
         }
     }
 }
@@ -134,7 +134,7 @@ function kitty_apply(x: Rule, y: Rule) {
 
 function i3_apply(x: Rule, y: Rule) {
     const f = fs_file_ls(x.config_path)[0];
-    fs_cp(`${x.config_path}/${f}`, y.config_path);
+    fs_cp(`${x.config_path}/${f}`, y.config_path, true);
 }
 
 function rofi_apply(x: Rule, y: Rule) {
@@ -154,7 +154,7 @@ function rofi_apply(x: Rule, y: Rule) {
         xs.push(entry);
     }
     fs_write_utf8_list(y.config_path, xs);
-    fs_cp(x.config_path, y.config_path.replace('config.rasi', 'colors.rasi'));
+    fs_cp(x.config_path, y.config_path.replace('config.rasi', 'colors.rasi'), true);
 }
 
 const functions = {

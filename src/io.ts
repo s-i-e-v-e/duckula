@@ -5,8 +5,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
-export {ps_exec} from "https://raw.githubusercontent.com/s-i-e-v-e/nonstd/3747fa9db336220064a7dd7b34ce542befd201fd/src/ts/os/ps.ts"
-import { fs_ls } from "https://raw.githubusercontent.com/s-i-e-v-e/nonstd/3747fa9db336220064a7dd7b34ce542befd201fd/src/ts/os/fs.ts"
+export {ps_exec} from "https://raw.githubusercontent.com/s-i-e-v-e/nonstd/983d2cfd1d6e8e2e27a9a1053e051f8534bd0f42/src/ts/os/ps.ts"
+import { fs_ls } from "https://raw.githubusercontent.com/s-i-e-v-e/nonstd/983d2cfd1d6e8e2e27a9a1053e051f8534bd0f42/src/ts/os/fs.ts"
 export {
     fs_file_exists,
     fs_cp,
@@ -16,7 +16,7 @@ export {
     fs_write_utf8_list,
     fs_canonical_path,
     fs_parse_path
-} from "https://raw.githubusercontent.com/s-i-e-v-e/nonstd/3747fa9db336220064a7dd7b34ce542befd201fd/src/ts/os/fs.ts"
+} from "https://raw.githubusercontent.com/s-i-e-v-e/nonstd/983d2cfd1d6e8e2e27a9a1053e051f8534bd0f42/src/ts/os/fs.ts"
 
 export function list_entry_replace(xs: string[], find: string, replace: string) {
     let success = false;
